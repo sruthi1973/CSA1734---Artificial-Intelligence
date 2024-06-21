@@ -1,0 +1,87 @@
+from collections import deque
+
+class State:
+    def __init__(self, missionaries, cannibals, boat):
+        self.missionaries = missionaries
+        self.cannibals = cannibals
+        self.boat = boat  # 0 for left bank, 1 for right bank
+    
+    def is_valid(self):
+        # Check if missionaries outnumbered by cannibals on either bank
+        if self.missionaries < 0 or self.cannibals < 0:
+            return False
+        if self.missionaries > 3 or self.cannibals > 3:
+            return False
+        # Check if missionaries are eaten on either bank
+        if (self.cannibals > self.missionaries > 0) or (self.cannibals < self.missionaries < 3):
+            return False
+        return True
+    
+    def is_goal(self):
+        return self.missionaries == 0 and self.cannibals == 0 and self.boat == 1
+    
+    def __eq__(self, other):
+        return self.missionaries == other.missionaries and self.cannibals == other.cannibals and self.boat == other.boat
+    
+    def __hash__(self):
+        return hash((self.missionaries, self.cannibals, self.boat))
+    
+    def __str__(self):
+        return f"({self.missionaries}, {self.cannibals}, {self.boat})"
+    
+
+def get_neighbors(state):
+    neighbors = []
+    if state.boat == 0:
+        # Boat is on the left bank
+        for m in range(3):
+            for c in range(3):
+                if 1 <= m + c <= 2:
+                    new_state = State(state.missionaries - m, state.cannibals - c, 1)
+                    if new_state.is_valid():
+                        neighbors.append(new_state)
+    else:
+        # Boat is on the right bank
+        for m in range(3):
+            for c in range(3):
+                if 1 <= m + c <= 2:
+                    new_state = State(state.missionaries + m, state.cannibals + c, 0)
+                    if new_state.is_valid():
+                        neighbors.append(new_state)
+    return neighbors
+
+
+def bfs():
+    initial_state = State(3, 3, 0)
+    queue = deque([([], initial_state)])
+    visited = set()
+    visited.add(initial_state)
+    
+    while queue:
+        path, current_state = queue.popleft()
+        
+        if current_state.is_goal():
+            return path + [current_state]
+        
+        for neighbor in get_neighbors(current_state):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((path + [current_state], neighbor))
+    
+    return None
+
+def print_solution(solution):
+    if solution is None:
+        print("No solution found.")
+    else:
+        for idx, state in enumerate(solution):
+            if idx == 0:
+                print(f"Start: {state}")
+            elif idx == len(solution) - 1:
+                print(f"Goal: {state}")
+            else:
+                print(f"Step {idx}: {state}")
+
+if __name__ == "__main__":
+    solution = bfs()
+    print_solution(solution)
