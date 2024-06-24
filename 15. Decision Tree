@@ -1,0 +1,109 @@
+
+data = [
+    ['Green', 3, 'Apple'],
+    ['Yellow', 3, 'Apple'],
+    ['Red', 1, 'Grape'],
+    ['Red', 1, 'Grape'],
+    ['Yellow', 3, 'Lemon'],
+]
+
+class Node:
+    def __init__(self, predicted_class):
+        self.predicted_class = predicted_class
+        self.feature_index = 0
+        self.threshold = 0
+        self.left = None
+        self.right = None
+
+def entropy(y):
+    """Calculate the entropy of label list y."""
+    from collections import Counter
+    import math
+    
+    class_counts = Counter(y)
+    total_samples = len(y)
+    entropy = 0.0
+    
+    for count in class_counts.values():
+        probability = count / total_samples
+        entropy -= probability * math.log2(probability)
+    
+    return entropy
+
+def split_dataset(X, y, feature_index, threshold):
+    """Split dataset X, y based on feature_index and threshold."""
+    X_left, X_right, y_left, y_right = [], [], [], []
+    for i in range(len(X)):
+        if X[i][feature_index] == threshold:
+            X_left.append(X[i])
+            y_left.append(y[i])
+        else:
+            X_right.append(X[i])
+            y_right.append(y[i])
+    return X_left, X_right, y_left, y_right
+
+def find_best_split(X, y):
+    """Find the best split for the current node."""
+    best_entropy = float('inf')
+    best_feature_index = None
+    best_threshold = None
+
+    num_features = len(X[0])
+
+    for feature_index in range(num_features):
+        feature_values = set([example[feature_index] for example in X])
+        for threshold in feature_values:
+            X_left, X_right, y_left, y_right = split_dataset(X, y, feature_index, threshold)
+            left_entropy = entropy(y_left)
+            right_entropy = entropy(y_right)
+            total_entropy = (len(y_left) * left_entropy + len(y_right) * right_entropy) / len(y)
+            
+            if total_entropy < best_entropy:
+                best_entropy = total_entropy
+                best_feature_index = feature_index
+                best_threshold = threshold
+    
+    return best_feature_index, best_threshold
+
+def build_tree(X, y, depth=0, max_depth=None):
+    """Recursively build the decision tree."""
+    if max_depth is not None and depth == max_depth:
+        return Node(predicted_class=max(set(y), key=y.count))
+
+    if len(set(y)) == 1:
+        return Node(predicted_class=y[0])
+
+    feature_index, threshold = find_best_split(X, y)
+    X_left, X_right, y_left, y_right = split_dataset(X, y, feature_index, threshold)
+    
+    node = Node(predicted_class=None)
+    node.feature_index = feature_index
+    node.threshold = threshold
+    node.left = build_tree(X_left, y_left, depth + 1, max_depth)
+    node.right = build_tree(X_right, y_right, depth + 1, max_depth)
+    
+    return node
+
+def predict_tree(node, X):
+    """Predict the class for new samples."""
+    predictions = []
+    for sample in X:
+        current_node = node
+        while current_node.predicted_class is None:
+            if sample[current_node.feature_index] == current_node.threshold:
+                current_node = current_node.left
+            else:
+                current_node = current_node.right
+        predictions.append(current_node.predicted_class)
+    return predictions
+
+# Example usage:
+X = [row[:-1] for row in data]
+y = [row[-1] for row in data]
+
+tree = build_tree(X, y, max_depth=2)
+
+# Example prediction:
+sample = ['Yellow', 3]  # Sample to predict
+predicted_class = predict_tree(tree, [sample])[0]
+print(f"Predicted class for sample {sample}: {predicted_class}")
